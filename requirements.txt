@@ -1,0 +1,29 @@
+# ============================================================
+# Dependências do projeto
+# Instalação: pip install -r requirements.txt
+# ============================================================
+
+# Manipulação de dados
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Visualização
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Cliente LLM (escolha um conforme o grupo decidir)
+anthropic>=0.40.0      # Claude (recomendado pela docs clara de tool use)
+# openai>=1.50.0       # GPT (descomentar se usarem OpenAI)
+# google-generativeai  # Gemini (descomentar se usarem Google)
+
+# Configuração via .env
+python-dotenv>=1.0.0
+
+# Interface CLI colorida (opcional, mas ajuda muito a ler os logs)
+rich>=13.0.0
+
+# Testes
+pytest>=7.4.0
+
+# Type hints (Python 3.10+)
+typing-extensions>=4.8.0

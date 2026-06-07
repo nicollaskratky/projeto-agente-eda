@@ -1,0 +1,46 @@
+{
+    "_observacao": "Este arquivo contém 5 perguntas de EXEMPLO. Vocês precisam adicionar pelo menos 25 perguntas adicionais para completar o benchmark mínimo de 30. Veja o enunciado para a distribuição esperada (10 factuais simples, 15 analíticas multi-tool, 5 ambíguas/inválidas).",
+
+    "perguntas": [
+        {
+            "id": "ex-001",
+            "tipo": "factual",
+            "pergunta": "Quantas linhas tem o dataset?",
+            "resposta_esperada": null,
+            "tipo_resposta": "numero_inteiro",
+            "observacao": "Substituir 'null' pelo número real de linhas do CSV escolhido pelo grupo."
+        },
+        {
+            "id": "ex-002",
+            "tipo": "factual",
+            "pergunta": "Quais são as colunas do dataset?",
+            "resposta_esperada": null,
+            "tipo_resposta": "lista_strings",
+            "observacao": "Substituir 'null' pela lista das colunas do CSV. A comparação deve ser case-insensitive e ignorar ordem."
+        },
+        {
+            "id": "ex-003",
+            "tipo": "analitica",
+            "pergunta": "Qual a média de [coluna_numerica] agrupada por [coluna_categorica]?",
+            "resposta_esperada": null,
+            "tipo_resposta": "dict_numerico",
+            "observacao": "Adaptar para colunas reais do CSV. Calcular o gabarito em pandas e colocar aqui."
+        },
+        {
+            "id": "ex-004",
+            "tipo": "analitica",
+            "pergunta": "Existe correlação entre [coluna_num_1] e [coluna_num_2]?",
+            "resposta_esperada": null,
+            "tipo_resposta": "numero_float",
+            "observacao": "Calcular df[col1].corr(df[col2]) em pandas e colocar o valor com 4 casas decimais."
+        },
+        {
+            "id": "ex-005",
+            "tipo": "ambigua",
+            "pergunta": "Qual a melhor coluna?",
+            "resposta_esperada": "recusa",
+            "tipo_resposta": "categorica",
+            "observacao": "Esperamos que o agente recuse ou peça esclarecimento. A comparação verifica se a resposta contém palavras como 'ambígua', 'não entendi', 'esclarecer', etc."
+        }
+    ]
+}

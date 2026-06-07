@@ -1,0 +1,39 @@
+# Ambiente Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+
+# Variáveis sensíveis (API keys!)
+.env
+
+# Outputs gerados durante execução
+outputs/*.png
+outputs/*.jpg
+logs/*.json
+logs/*.log
+!outputs/.gitkeep
+!logs/.gitkeep
+
+# IDE
+.idea/workspace.xml
+.idea/usage.statistics.xml
+.idea/shelf/
+.vscode/
+
+# Testes e cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dataset grande (caso seja > 100MB - usar Git LFS ou link no README)
+# data/*.csv
