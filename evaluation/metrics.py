@@ -12,10 +12,6 @@ não-trivial. Este módulo oferece uma abordagem PRAGMÁTICA por tipo de respost
                                    na resposta com valores aproximadamente iguais.
   - categorica:                    verifica se a resposta contém alguma palavra-chave.
 
-TODO (alunos):
-  - O comparador atual é SIMPLES por design. Discutam no relatório suas
-    limitações: e se a resposta certa estiver expressa de forma diferente?
-    Considerem usar LLM-as-judge como melhoria.
 """
 
 from __future__ import annotations
@@ -139,12 +135,15 @@ def avaliar_resposta(resposta: str, esperado, tipo_resposta: str) -> bool:
         return False
 
     if tipo_resposta in ("numero_inteiro", "numero_float"):
-        return comparar_numero(resposta, float(esperado))
+        valor = esperado[0] if isinstance(esperado, list) else esperado
+        return comparar_numero(resposta, float(valor))
     elif tipo_resposta == "lista_strings":
         return comparar_lista_strings(resposta, esperado)
     elif tipo_resposta == "dict_numerico":
         return comparar_dict_numerico(resposta, esperado)
     elif tipo_resposta == "categorica":
+        if isinstance(esperado, list):
+            return all(comparar_categorica(resposta, item) for item in esperado)
         return comparar_categorica(resposta, esperado)
     else:
         raise ValueError(f"Tipo de resposta desconhecido: {tipo_resposta}")

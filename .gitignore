@@ -8,7 +8,6 @@ venv/
 .venv/
 env/
 ENV/
-
 # Variáveis sensíveis (API keys!)
 .env
 

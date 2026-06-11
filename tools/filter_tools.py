@@ -90,6 +90,15 @@ FUNCOES_VALIDAS = {"mean", "median", "sum", "min", "max", "count", "std"}
     description=(
         "Agrupa o dataset por uma coluna e aplica uma função de agregação "
         "sobre outra coluna. Equivalente a df.groupby(grupo)[coluna].agg(funcao).\n\n"
+        "Use o parâmetro opcional `filtro` (sintaxe pandas .query) para restringir "
+        "o dataset ANTES de agrupar — evitando uma chamada separada a `filtrar`.\n\n"
+        "Exemplos:\n"
+        "  - Vitórias por piloto (Position==1): grupo='Driver', coluna='Position', "
+        "funcao='count', filtro='Position == 1'\n"
+        "  - Pontos por equipe em 2023: grupo='Team', coluna='Points', "
+        "funcao='sum', filtro='season == 2023'\n"
+        "  - Poles por equipe: grupo='Team', coluna='Position', funcao='count', "
+        "filtro='`Starting Grid` == 1'\n\n"
         "Funções válidas: mean, median, sum, min, max, count, std."
     ),
     parameters={
@@ -108,13 +117,29 @@ FUNCOES_VALIDAS = {"mean", "median", "sum", "min", "max", "count", "std"}
                 "enum": list(FUNCOES_VALIDAS),
                 "description": "Função de agregação.",
             },
+            "filtro": {
+                "type": "string",
+                "description": (
+                    "Expressão pandas .query() opcional para filtrar o dataset "
+                    "antes do agrupamento. Ex.: 'season == 2023' ou 'Position == 1'."
+                ),
+            },
         },
         "required": ["grupo", "coluna", "funcao"],
     },
 )
-def agrupar_e_agregar(grupo: str, coluna: str, funcao: str) -> dict:
-    """Groupby + agg."""
+def agrupar_e_agregar(grupo: str, coluna: str, funcao: str, filtro: str = "") -> dict:
+    """Groupby + agg com filtro opcional pré-agrupamento."""
     df = state.require_loaded()
+
+    # Aplica filtro se fornecido
+    if filtro:
+        try:
+            df = df.query(filtro)
+        except Exception as e:
+            return {"erro": f"Filtro inválido: {e}"}
+        if len(df) == 0:
+            return {"erro": f"Nenhuma linha após aplicar filtro: {filtro!r}"}
 
     # Validações
     if grupo not in df.columns:
@@ -139,6 +164,7 @@ def agrupar_e_agregar(grupo: str, coluna: str, funcao: str) -> dict:
         "grupo": grupo,
         "coluna": coluna,
         "funcao": funcao,
+        "filtro_aplicado": filtro or None,
         "resultados": {
             str(k): round(float(v), 3) if pd.notna(v) else None
             for k, v in resultado.items()

@@ -1,151 +1,107 @@
-"""
-Interface de linha de comando (CLI) do agente.
-
-Execute com:
-    python cli.py
-
-Comandos especiais durante a sessão:
-    /sair         - encerra
-    /trajetoria   - mostra a trajetória da última pergunta
-    /custo        - mostra custo/tokens acumulados na sessão
-    /ajuda        - lista de comandos
-"""
-
-import sys
+import streamlit as st
 from pathlib import Path
-
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-
 from agent import Agent
 from tools import state
 from config import DATASET_PATH
 
+OUTPUTS_DIR = Path("outputs")
 
-console = Console()
-
-
-def imprimir_boas_vindas():
-    console.print(Panel.fit(
-        "[bold blue]Agente EDA[/bold blue] — Análise de CSV em linguagem natural\n"
-        "Digite sua pergunta e pressione Enter. /ajuda para comandos.",
-        border_style="blue",
-    ))
-
-
-def imprimir_ajuda():
-    tabela = Table(title="Comandos disponíveis")
-    tabela.add_column("Comando", style="cyan")
-    tabela.add_column("Descrição")
-    tabela.add_row("/sair", "Encerra a sessão")
-    tabela.add_row("/trajetoria", "Mostra a trajetória da última pergunta")
-    tabela.add_row("/custo", "Mostra tokens e tempo acumulados")
-    tabela.add_row("/ajuda", "Esta tabela")
-    console.print(tabela)
-
-
-def imprimir_trajetoria(resultado):
-    if resultado is None:
-        console.print("[yellow]Sem trajetória — faça uma pergunta primeiro.[/yellow]")
-        return
-
-    tabela = Table(title=f"Trajetória: {resultado.pergunta[:60]}")
-    tabela.add_column("#", style="dim", width=3)
-    tabela.add_column("Tipo", style="cyan")
-    tabela.add_column("Conteúdo")
-
-    for i, passo in enumerate(resultado.trajetoria, start=1):
-        if passo.tipo == "llm_text":
-            conteudo = passo.conteudo[:120] + ("..." if len(passo.conteudo) > 120 else "")
-        elif passo.tipo == "tool_call":
-            args_str = ", ".join(f"{k}={v}" for k, v in passo.conteudo["argumentos"].items())
-            conteudo = f"[green]{passo.conteudo['nome']}[/green]({args_str})"
-        else:  # tool_result
-            conteudo = str(passo.conteudo)[:120]
-        tabela.add_row(str(i), passo.tipo, conteudo)
-
-    console.print(tabela)
-
-
-def main():
-    # 1. Verifica que o dataset existe
+# -----------------------------
+# Inicialização
+# -----------------------------
+if "init" not in st.session_state:
     if not Path(DATASET_PATH).exists():
-        console.print(
-            f"[red]Erro:[/red] dataset não encontrado em {DATASET_PATH}.\n"
-            "Coloque seu CSV na pasta data/ e ajuste DATASET_PATH em config.py."
-        )
-        sys.exit(1)
-
-    # 2. Carrega o dataset
+        st.error(f"Dataset não encontrado em {DATASET_PATH}")
+        st.stop()
     state.load(str(DATASET_PATH))
-    console.print(
-        f"[green]✓[/green] Dataset carregado: [bold]{DATASET_PATH.name}[/bold] "
-        f"({len(state.df)} linhas × {len(state.df.columns)} colunas)\n"
-    )
+    st.session_state.agent = Agent()
+    st.session_state.messages = []  # histórico do chat
+    st.session_state.ultima_resposta = None
+    st.session_state.custo = {
+        "input": 0,
+        "output": 0,
+        "latencia": 0.0,
+        "tool_calls": 0
+    }
+    # snapshot dos arquivos já existentes em outputs/
+    OUTPUTS_DIR.mkdir(exist_ok=True)
+    st.session_state.outputs_vistos = set(
+        p.name for p in OUTPUTS_DIR.glob("*.png")
+    ) | set(p.name for p in OUTPUTS_DIR.glob("*.jpg"))
+    st.session_state.init = True
 
-    # 3. Inicializa o agente
-    try:
-        agente = Agent()
-    except RuntimeError as e:
-        console.print(f"[red]Erro:[/red] {e}")
-        sys.exit(1)
+agent = st.session_state.agent
 
-    imprimir_boas_vindas()
+# -----------------------------
+# Helper: imagens novas desde o último turno
+# -----------------------------
+def coletar_imagens_novas() -> list[Path]:
+    """Retorna imagens em outputs/ que ainda não foram exibidas."""
+    atuais = set(
+        p.name for p in OUTPUTS_DIR.glob("*.png")
+    ) | set(p.name for p in OUTPUTS_DIR.glob("*.jpg"))
+    novas = atuais - st.session_state.outputs_vistos
+    st.session_state.outputs_vistos = atuais
+    return sorted(OUTPUTS_DIR / nome for nome in novas)
 
-    # 4. Sessão interativa
-    ultima_resposta = None
-    custo_acumulado = {"input": 0, "output": 0, "latencia": 0.0, "tool_calls": 0}
+# -----------------------------
+# Header
+# -----------------------------
+st.title("📊 Agente EDA")
 
-    while True:
-        try:
-            pergunta = console.input("\n[bold cyan]> [/bold cyan]").strip()
-        except (EOFError, KeyboardInterrupt):
-            console.print("\n[dim]Até mais.[/dim]")
-            break
+# -----------------------------
+# Render do histórico (ChatGPT style)
+# -----------------------------
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+        # re-renderiza imagens salvas junto com a mensagem
+        for img_path in msg.get("imagens", []):
+            st.image(img_path)
 
-        if not pergunta:
-            continue
+# -----------------------------
+# Input do usuário
+# -----------------------------
+pergunta = st.chat_input("Pergunte algo sobre o dataset...")
 
-        # Comandos especiais
-        if pergunta == "/sair":
-            console.print("[dim]Até mais.[/dim]")
-            break
-        elif pergunta == "/ajuda":
-            imprimir_ajuda()
-            continue
-        elif pergunta == "/trajetoria":
-            imprimir_trajetoria(ultima_resposta)
-            continue
-        elif pergunta == "/custo":
-            console.print(
-                f"Tokens entrada: {custo_acumulado['input']}\n"
-                f"Tokens saída:   {custo_acumulado['output']}\n"
-                f"Tool calls:     {custo_acumulado['tool_calls']}\n"
-                f"Latência total: {custo_acumulado['latencia']:.2f}s"
-            )
-            continue
+# -----------------------------
+# Quando usuário envia mensagem
+# -----------------------------
+if pergunta:
+    # 1. Mostra mensagem do usuário
+    st.session_state.messages.append({"role": "user", "content": pergunta})
+    with st.chat_message("user"):
+        st.markdown(pergunta)
 
-        # Pergunta normal — chama o agente
-        with console.status("[dim]Pensando...[/dim]"):
-            resultado = agente.perguntar(pergunta)
+    # 2. Processa agente
+    with st.chat_message("assistant"):
+        with st.spinner("Pensando..."):
+            resultado = agent.perguntar(pergunta)
 
-        ultima_resposta = resultado
-        custo_acumulado["input"] += resultado.input_tokens
-        custo_acumulado["output"] += resultado.output_tokens
-        custo_acumulado["latencia"] += resultado.latencia_total
-        custo_acumulado["tool_calls"] += resultado.total_tool_calls
+        st.session_state.ultima_resposta = resultado
 
-        # Imprime resposta
-        cor_borda = "green" if resultado.sucesso else "red"
-        console.print(Panel(
-            resultado.resposta_final,
-            border_style=cor_borda,
-            title=f"[dim]{resultado.total_tool_calls} tool calls · "
-                  f"{resultado.latencia_total:.2f}s · "
-                  f"{resultado.input_tokens + resultado.output_tokens} tokens[/dim]",
-        ))
+        # atualiza custo
+        st.session_state.custo["input"] += resultado.input_tokens
+        st.session_state.custo["output"] += resultado.output_tokens
+        st.session_state.custo["latencia"] += resultado.latencia_total
+        st.session_state.custo["tool_calls"] += resultado.total_tool_calls
 
+        # resposta final
+        st.markdown(resultado.resposta_final)
+        st.caption(
+            f"🛠 {resultado.total_tool_calls} tool calls · "
+            f"⏱ {resultado.latencia_total:.2f}s · "
+            f"🔢 {resultado.input_tokens + resultado.output_tokens} tokens"
+        )
 
-if __name__ == "__main__":
-    main()
+        # exibe imagens geradas neste turno
+        imagens_novas = coletar_imagens_novas()
+        for img_path in imagens_novas:
+            st.image(str(img_path), use_container_width=True)
+
+    # salva no histórico (com referência às imagens para re-render)
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": resultado.resposta_final,
+        "imagens": [str(p) for p in imagens_novas],
+    })

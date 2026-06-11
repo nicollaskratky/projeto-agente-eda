@@ -1,46 +1,363 @@
 {
-    "_observacao": "Este arquivo contém 5 perguntas de EXEMPLO. Vocês precisam adicionar pelo menos 25 perguntas adicionais para completar o benchmark mínimo de 30. Veja o enunciado para a distribuição esperada (10 factuais simples, 15 analíticas multi-tool, 5 ambíguas/inválidas).",
-
-    "perguntas": [
-        {
-            "id": "ex-001",
-            "tipo": "factual",
-            "pergunta": "Quantas linhas tem o dataset?",
-            "resposta_esperada": null,
-            "tipo_resposta": "numero_inteiro",
-            "observacao": "Substituir 'null' pelo número real de linhas do CSV escolhido pelo grupo."
-        },
-        {
-            "id": "ex-002",
-            "tipo": "factual",
-            "pergunta": "Quais são as colunas do dataset?",
-            "resposta_esperada": null,
-            "tipo_resposta": "lista_strings",
-            "observacao": "Substituir 'null' pela lista das colunas do CSV. A comparação deve ser case-insensitive e ignorar ordem."
-        },
-        {
-            "id": "ex-003",
-            "tipo": "analitica",
-            "pergunta": "Qual a média de [coluna_numerica] agrupada por [coluna_categorica]?",
-            "resposta_esperada": null,
-            "tipo_resposta": "dict_numerico",
-            "observacao": "Adaptar para colunas reais do CSV. Calcular o gabarito em pandas e colocar aqui."
-        },
-        {
-            "id": "ex-004",
-            "tipo": "analitica",
-            "pergunta": "Existe correlação entre [coluna_num_1] e [coluna_num_2]?",
-            "resposta_esperada": null,
-            "tipo_resposta": "numero_float",
-            "observacao": "Calcular df[col1].corr(df[col2]) em pandas e colocar o valor com 4 casas decimais."
-        },
-        {
-            "id": "ex-005",
-            "tipo": "ambigua",
-            "pergunta": "Qual a melhor coluna?",
-            "resposta_esperada": "recusa",
-            "tipo_resposta": "categorica",
-            "observacao": "Esperamos que o agente recuse ou peça esclarecimento. A comparação verifica se a resposta contém palavras como 'ambígua', 'não entendi', 'esclarecer', etc."
-        }
-    ]
+  "descricao": "Benchmark de avaliação do agente de EDA de F1 — 30 perguntas com gabaritos calculados via pandas",
+  "dataset": "f1_tratado.csv (2559 registros, temporadas 2019-2024)",
+  "perguntas": [
+    {
+      "id": 1,
+      "tipo": "factual",
+      "pergunta": "Quais são as colunas disponíveis no dataset?",
+      "resposta_esperada": [
+        "Track",
+        "Position",
+        "Driver",
+        "Team",
+        "Starting Grid",
+        "Laps",
+        "Points",
+        "season",
+        "Status"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 2,
+      "tipo": "factual",
+      "pergunta": "Quantas linhas tem o dataset?",
+      "resposta_esperada": [
+        "2.559"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 3,
+      "tipo": "factual",
+      "pergunta": "Quais temporadas estão disponíveis no dataset?",
+      "resposta_esperada": [
+        "2019",
+        "2020",
+        "2021",
+        "2022",
+        "2023",
+        "2024"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 4,
+      "tipo": "factual",
+      "pergunta": "Qual piloto ganhou mais corridas no total entre 2019 e 2024?",
+      "resposta_esperada": [
+        "Max Verstappen",
+        "58"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 5,
+      "tipo": "factual",
+      "pergunta": "Qual equipe somou mais pontos no total entre 2019 e 2024?",
+      "resposta_esperada": [
+        "Mercedes",
+        "3.218"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 6,
+      "tipo": "factual",
+      "pergunta": "Qual piloto largou mais vezes da pole position (posição 1 no grid)?",
+      "resposta_esperada": [
+        "Max Verstappen",
+        "40"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 7,
+      "tipo": "factual",
+      "pergunta": "Quantos pilotos diferentes aparecem no dataset?",
+      "resposta_esperada": [
+        "36"
+      ],
+      "tipo_resposta": "numero_inteiro"
+    },
+    {
+      "id": 8,
+      "tipo": "factual",
+      "pergunta": "Quantas corridas foram disputadas na temporada de 2024?",
+      "resposta_esperada": [
+        "24"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 9,
+      "tipo": "factual",
+      "pergunta": "Qual circuito aparece mais vezes no dataset?",
+      "resposta_esperada": [
+        "Bahrain",
+        "120"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 10,
+      "tipo": "factual",
+      "pergunta": "Qual piloto marcou mais voltas rápidas (Set Fastest Lap = 1)?",
+      "resposta_esperada": [
+        "Max Verstappen",
+        "12"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 11,
+      "tipo": "analitica",
+      "pergunta": "Quais foram os 5 pilotos com mais pontos na temporada de 2023?",
+      "resposta_esperada": [
+        "Max Verstappen",
+        "Sergio",
+        "Lewis Hamilton",
+        "Fernando Alonso",
+        "Charles Leclerc"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 12,
+      "tipo": "analitica",
+      "pergunta": "Qual piloto ganhou mais corridas em 2023?",
+      "resposta_esperada": [
+        "Max Verstappen",
+        "19"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 13,
+      "tipo": "analitica",
+      "pergunta": "Quem venceu corridas em 2022 e quantas vitórias cada um teve?",
+      "resposta_esperada": [
+        "Max Verstappen",
+        "15",
+        "Charles Leclerc",
+        "3",
+        "Sergio",
+        "2"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 14,
+      "tipo": "analitica",
+      "pergunta": "Qual equipe venceu mais corridas em 2023?",
+      "resposta_esperada": [
+        "Red Bull",
+        "21"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 15,
+      "tipo": "analitica",
+      "pergunta": "Qual a correlação entre posição de largada e posição final na corrida?",
+      "resposta_esperada": [
+        "0,53",
+        "positiva",
+        "moderada"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 16,
+      "tipo": "analitica",
+      "pergunta": "Qual a média de pontos por corrida de Lewis Hamilton no dataset?",
+      "resposta_esperada": [
+        "14",
+        "Hamilton",
+        "pontos"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 17,
+      "tipo": "analitica",
+      "pergunta": "Quais pilotos subiram ao pódio mais vezes em 2021?",
+      "resposta_esperada": [
+        "Max Verstappen",
+        "18",
+        "Lewis Hamilton",
+        "17",
+        "Valtteri Bottas",
+        "11"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 18,
+      "tipo": "analitica",
+      "pergunta": "Quantas vitórias Max Verstappen teve em cada temporada?",
+      "resposta_esperada": [
+        "2019",
+        "3",
+        "2021",
+        "10",
+        "2022",
+        "15",
+        "2023",
+        "19",
+        "2024",
+        "9"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 19,
+      "tipo": "analitica",
+      "pergunta": "Quais pilotos venceram mais de 5 corridas no período de 2019 a 2024?",
+      "resposta_esperada": [
+        "Max Verstappen",
+        "58",
+        "Lewis Hamilton",
+        "32",
+        "Charles Leclerc",
+        "8",
+        "Valtteri Bottas",
+        "7",
+        "Sergio",
+        "6"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 20,
+      "tipo": "analitica",
+      "pergunta": "Qual temporada teve mais pontos distribuídos no total?",
+      "resposta_esperada": [
+        "2024",
+        "2.443"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 21,
+      "tipo": "analitica",
+      "pergunta": "Quais equipes lideraram mais poles position no total?",
+      "resposta_esperada": [
+        "Mercedes",
+        "41",
+        "Ferrari",
+        "34",
+        "Red Bull",
+        "22"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 22,
+      "tipo": "analitica",
+      "pergunta": "Existe correlação entre número de voltas completadas e pontos conquistados?",
+      "resposta_esperada": [
+        "correlação",
+        "positiva",
+        "voltas",
+        "pontos"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 23,
+      "tipo": "analitica",
+      "pergunta": "Gere um gráfico de barras com os 10 pilotos com mais pontos no total.",
+      "resposta_esperada": [
+        "gráfico",
+        "barplot",
+        "outputs",
+        "png"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 24,
+      "tipo": "analitica",
+      "pergunta": "Quais são os valores extremos (outliers) na coluna de pontos?",
+      "resposta_esperada": [
+        "outlier",
+        "26",
+        "25"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 25,
+      "tipo": "analitica",
+      "pergunta": "Quantas corridas cada equipe disputou na temporada 2022?",
+      "resposta_esperada": [
+        "22",
+        "corridas",
+        "equipe"
+      ],
+      "tipo_resposta": "lista_strings"
+    },
+    {
+      "id": 26,
+      "tipo": "ambigua",
+      "pergunta": "Qual o melhor piloto da história da F1?",
+      "resposta_esperada": [
+        "dataset",
+        "2019",
+        "2024",
+        "não é possível"
+      ],
+      "tipo_resposta": "categorica"
+    },
+    {
+      "id": 27,
+      "tipo": "ambigua",
+      "pergunta": "Quem vai vencer o próximo campeonato?",
+      "resposta_esperada": [
+        "não é possível",
+        "previs",
+        "dados históricos"
+      ],
+      "tipo_resposta": "categorica"
+    },
+    {
+      "id": 28,
+      "tipo": "ambigua",
+      "pergunta": "Qual piloto é mais consistente?",
+      "resposta_esperada": [
+        "consistência",
+        "desvio",
+        "corridas"
+      ],
+      "tipo_resposta": "categorica"
+    },
+    {
+      "id": 29,
+      "tipo": "ambigua",
+      "pergunta": "O Hamilton está declinando?",
+      "resposta_esperada": [
+        "pontos",
+        "Hamilton",
+        "temporada",
+        "2019",
+        "2020",
+        "2021"
+      ],
+      "tipo_resposta": "categorica"
+    },
+    {
+      "id": 30,
+      "tipo": "ambigua",
+      "pergunta": "Mostre algo interessante sobre a Ferrari.",
+      "resposta_esperada": [
+        "Ferrari",
+        "pontos",
+        "vitórias",
+        "poles"
+      ],
+      "tipo_resposta": "categorica"
+    }
+  ]
 }

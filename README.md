@@ -1,5 +1,15 @@
 # Agente Conversacional de Análise Exploratória de Dados com LLM
 
+**Projeto:** Trabalho Agente EDA  
+**Disciplina:** Processamento de Linguagem Natural  
+**Professor:** Alex Marino  
+**Alunos:**
+- João Victor Netto Araujo  
+- Nicollas Germano Kratky  
+- Ramon Luis Sanches  
+- Rafael Carbonera Liute  
+
+---
 
 ## Visão Geral
 
@@ -10,7 +20,7 @@ A arquitetura adota o padrão **ReAct (Reasoning + Acting)**:
 ```
 Usuário → Orquestrador → LLM (decide) → Tool (executa) → Observa → ... → Resposta
                               ↑___________________________________________|
-                                        loop até resposta final (máx. 15 iterações)
+                                        loop até resposta final (máx. 10 iterações)
 ```
 
 ---
@@ -46,14 +56,15 @@ Usuário → Orquestrador → LLM (decide) → Tool (executa) → Observa → ..
 
 ```
 projeto_agente_eda/
+├── docs/                   # Relatório geral sobre o projeto
 ├── agent/                  # Loop do agente e integração com o LLM
-│   ├── __init__.py
+│   ├── init.py
 │   ├── agent.py            # Classe Agent com loop ReAct
 │   ├── llm_client.py       # Cliente da API DeepSeek (compatível OpenAI)
 │   └── tool_registry.py    # Registro dinâmico de tools
 │
 ├── tools/                  # Implementação das ferramentas (pandas)
-│   ├── __init__.py
+│   ├── init.py
 │   ├── base.py             # Decorador @tool, TOOL_REGISTRY e DataState
 │   ├── inspect_tools.py    # listar_colunas, descrever_dados, contar_valores
 │   ├── filter_tools.py     # filtrar, filtrar_e_contar, agrupar_e_agregar,
@@ -62,13 +73,13 @@ projeto_agente_eda/
 │   └── plot_tools.py       # gerar_grafico
 │
 ├── evaluation/             # Sistema de avaliação (benchmark)
-│   ├── __init__.py
+│   ├── init.py
 │   ├── benchmark.py        # Carrega benchmark.json e executa avaliação
 │   ├── metrics.py          # Cálculo de aprovação por palavras-chave, latência e custo
 │   └── benchmark.json      # 30 perguntas (10 factuais, 15 analíticas, 5 ambíguas)
 │
 ├── tests/                  # Testes unitários das tools
-│   ├── __init__.py
+│   ├── init.py
 │   └── test_tools.py       # 44 testes pytest em 6 classes
 │
 ├── data/
@@ -109,16 +120,16 @@ projeto_agente_eda/
    DEEPSEEK_API_KEY=sk-...
    ```
 
-> O arquivo `data/f1_tratado.csv` já deve estar presente. O caminho é configurado em `config.py`.
+> O arquivo `data/f1.csv` já deve estar presente. O caminho é configurado em `config.py`.
 
 ---
 
 ## Como Usar
 
-### Modo interativo (CLI)
+### Modo interface gráfica (Streamlit)
 
 ```bash
-python cli.py
+streamlit run cli.py
 ```
 
 Exemplo de sessão:
@@ -136,7 +147,7 @@ Max Verstappen — 19 vitórias em 22 corridas (86% de aproveitamento).
 Correlação de Pearson: 0,535 — positiva moderada.
 ```
 
-### Comandos especiais da CLI
+### Comandos especiais da interface
 
 | Comando | Função |
 |---|---|
@@ -187,12 +198,16 @@ São **11 ferramentas** distribuídas em 4 módulos. Todas recebem parâmetros s
 
 | Categoria | Total | Aprovadas | Taxa | Tools (méd.) | Latência (méd.) |
 |---|---|---|---|---|---|
-| Factual | 10 | 10 | 100% | 2,1 | 6,1 s |
-| Analítica | 15 | 13 | 87% | 2,1 | 6,2 s |
-| Ambígua | 5 | 5 | 100% | 7,2 | 16,1 s |
-| **TOTAL** | **30** | **28** | **93%** | **2,8** | **7,8 s** |
+| Factual | 10 | 10 | 100% | 1,6 | 5,15 s |
+| Analítica | 15 | 14 | 93,3% | 2,53 | 7,35 s |
+| Ambígua | 5 | 3 | 60% | 3,4 | 10,25 s |
+| **TOTAL** | **30** | **27** | **90%** | **2,5** | **7,36 s** |
 
-Custo total estimado de US$ 0,09 por execução completa do benchmark.
+Custo total estimado de US$ 0,0069 por execução completa do benchmark (21.793 tokens de entrada × $0,14/M + 13.967 tokens de saída × $0,28/M).
+
+O benchmark avalia o agente em três tipos de pergunta: **factuais** (respostas diretas e verificáveis, como contagens e rankings), **analíticas** (que exigem agrupamentos, filtros combinados e cálculos estatísticos) e **ambíguas** (questões abertas ou que ultrapassam o escopo do dataset, onde o agente deve reconhecer seus próprios limites). Cada resposta é comparada automaticamente a um gabarito pré-definido por palavras-chave, e o resultado final é salvo em `logs/` no formato JSON com todas as métricas detalhadas.
+
+O agente atingiu **90% de acurácia geral**, com desempenho perfeito na categoria factual (100%). O maior ponto de atenção ficou nas perguntas ambíguas (60%), onde o agente nem sempre reconheceu adequadamente os limites do dataset ou forneceu dados históricos de suporte. Nas perguntas analíticas (93,3%), o único erro foi de filtragem, por utilizar `Position <= 3` sem excluir pilotos não classificados (`Position == 0`), inflando contagens indevidamente. A análise completa dos resultados, incluindo trajetórias de raciocínio, erros identificados e discussão sobre custo e latência, está disponível no relatório em `docs/`.
 
 ---
 
