@@ -1,67 +1,85 @@
-# Agente de Análise Exploratória de Dados em Linguagem Natural
+# Agente Conversacional de Análise Exploratória de Dados com LLM
 
-Trabalho Final — Tecnologia em Ciência de Dados (5º semestre) — Fatec Ourinhos
 
-Esqueleto inicial do projeto. Os pontos marcados com `TODO` ao longo do código são onde
-vocês devem completar a implementação.
+## Visão Geral
 
----
+O projeto implementa um **agente conversacional** baseado em LLM que recebe perguntas em português sobre o dataset **F1 Race Results (2019–2024)** e responde executando, autonomamente, operações de análise exploratória (EDA) por meio de *function calling*.
 
-## Visão geral
-
-O projeto implementa um **agente conversacional** que recebe perguntas em português sobre
-um arquivo CSV e responde executando, autonomamente, operações de análise exploratória
-(EDA) por meio de *function calling*.
+A arquitetura adota o padrão **ReAct (Reasoning + Acting)**:
 
 ```
 Usuário → Orquestrador → LLM (decide) → Tool (executa) → Observa → ... → Resposta
                               ↑___________________________________________|
-                                        loop até resposta final
+                                        loop até resposta final (máx. 15 iterações)
 ```
 
 ---
 
-## Estrutura de pastas
+## Dataset
+
+**F1 Race Results** — resultados individuais de pilotos em corridas de Fórmula 1 das temporadas 2019 a 2024.
+
+- Arquivo: `data/f1.csv`
+- Registros: **2.559 linhas × 14 colunas**
+- Fonte: [Kaggle — Formula 1 Race Results Dataset](https://www.kaggle.com)
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| Track | str | Nome do circuito |
+| Position | int | Posição final (0 = não classificado) |
+| Driver | str | Nome do piloto |
+| Team | str | Nome da equipe |
+| Starting Grid | int | Posição de largada no grid |
+| Laps | int | Número de voltas completadas |
+| Points | int | Pontos conquistados na corrida |
+| +1 Pt | int | 1 se recebeu ponto extra pela volta mais rápida |
+| season | int | Ano da temporada (2019–2024) |
+| Set Fastest Lap | int | 1 se marcou a volta mais rápida da corrida |
+| Status | int | 1=Finished, 2=NC, 3=DNF, 4=DNS, 5=DQ |
+| Race Time | str | Tempo total de corrida (H:MM:SS.mmm ou +S.mmm) |
+| Fastest Lap Time | str | Tempo da volta mais rápida (M:SS.mmm) |
+| No | int | Número do carro |
+
+---
+
+## Estrutura de Pastas
 
 ```
 projeto_agente_eda/
 ├── agent/                  # Loop do agente e integração com o LLM
 │   ├── __init__.py
-│   ├── agent.py            # Classe principal Agent
-│   ├── llm_client.py       # Cliente da API (Anthropic / OpenAI / Ollama)
-│   └── tool_registry.py    # Registro de tools disponíveis para o LLM
+│   ├── agent.py            # Classe Agent com loop ReAct
+│   ├── llm_client.py       # Cliente da API DeepSeek (compatível OpenAI)
+│   └── tool_registry.py    # Registro dinâmico de tools
 │
 ├── tools/                  # Implementação das ferramentas (pandas)
 │   ├── __init__.py
-│   ├── base.py             # Decorador @tool e base comum
+│   ├── base.py             # Decorador @tool, TOOL_REGISTRY e DataState
 │   ├── inspect_tools.py    # listar_colunas, descrever_dados, contar_valores
-│   ├── filter_tools.py     # filtrar, agrupar_e_agregar
+│   ├── filter_tools.py     # filtrar, filtrar_e_contar, agrupar_e_agregar,
+│   │                       # analisar_tempo, tempo_total_piloto
 │   ├── stats_tools.py      # correlacao, detectar_outliers
 │   └── plot_tools.py       # gerar_grafico
 │
 ├── evaluation/             # Sistema de avaliação (benchmark)
 │   ├── __init__.py
-│   ├── benchmark.py        # Carrega benchmark.json e executa
-│   ├── metrics.py          # Cálculo de acurácia, latência, custo, etc.
-│   └── benchmark.json      # 5 perguntas de exemplo (vocês adicionam +25)
-│
-├── data/                   # CSV(s) usados pelo grupo (colocar aqui)
-│   └── .gitkeep
-│
-├── outputs/                # Gráficos gerados pelo agente
-│   └── .gitkeep
-│
-├── logs/                   # Logs de execução
-│   └── .gitkeep
+│   ├── benchmark.py        # Carrega benchmark.json e executa avaliação
+│   ├── metrics.py          # Cálculo de aprovação por palavras-chave, latência e custo
+│   └── benchmark.json      # 30 perguntas (10 factuais, 15 analíticas, 5 ambíguas)
 │
 ├── tests/                  # Testes unitários das tools
 │   ├── __init__.py
-│   └── test_tools.py
+│   └── test_tools.py       # 44 testes pytest em 6 classes
 │
+├── data/
+│   └── f1_tratado.csv      # Dataset pré-processado
+│
+├── outputs/                # Gráficos gerados pelo agente (PNG)
+├── logs/                   # Logs de execução e resultados de benchmark
 ├── cli.py                  # Interface de linha de comando (entry point)
-├── config.py               # Configurações centralizadas
+├── config.py               # Configurações centralizadas (modelo, caminhos, limites)
 ├── requirements.txt        # Dependências
-├── .env.example            # Exemplo de variáveis de ambiente (API keys)
+├── .env.example            # Exemplo de variáveis de ambiente
 ├── .gitignore
 └── README.md
 ```
@@ -70,32 +88,32 @@ projeto_agente_eda/
 
 ## Instalação
 
-### 1. Pré-requisitos
+### Pré-requisitos
 
 - Python 3.10 ou superior
-- Conta em um provedor de LLM (Anthropic recomendado pela documentação clara)
+- Conta na [API DeepSeek](https://api-docs.deepseek.com)
 
-### 2. Setup no PyCharm
+### Setup
 
-1. **File → Open** e selecione a pasta do projeto.
-2. PyCharm vai detectar `requirements.txt` e oferecer criar um virtualenv — aceite.
-3. Após criar o venv, instale as dependências:
+1. Clone o repositório e crie um ambiente virtual:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # Windows: .venv\Scripts\activate
    ```
+2. Instale as dependências:
+   ```bash
    pip install -r requirements.txt
    ```
-4. Copie `.env.example` para `.env` e preencha sua API key:
+3. Copie `.env.example` para `.env` e preencha sua chave:
    ```
-   ANTHROPIC_API_KEY=sk-ant-...
+   DEEPSEEK_API_KEY=sk-...
    ```
-5. **Marque a pasta raiz como Sources Root**: clique direito na pasta → *Mark Directory as → Sources Root*.
 
-### 3. Coloque o CSV do grupo em `data/`
-
-Por exemplo: `data/adult.csv`. Edite `config.py` para apontar para o arquivo.
+> O arquivo `data/f1_tratado.csv` já deve estar presente. O caminho é configurado em `config.py`.
 
 ---
 
-## Como usar
+## Como Usar
 
 ### Modo interativo (CLI)
 
@@ -107,11 +125,25 @@ Exemplo de sessão:
 
 ```
 > Quais são as colunas do dataset?
-[O agente vai chamar listar_colunas() e responder]
+[chama listar_colunas() e descreve as 14 colunas]
 
-> Qual a renda média por gênero?
-[O agente vai chamar agrupar_e_agregar(grupo='sex', coluna='income', funcao='mean')]
+> Quem ganhou mais corridas em 2023?
+[chama filtrar_e_contar("season==2023 and Position==1", "Driver")]
+Max Verstappen — 19 vitórias em 22 corridas (86% de aproveitamento).
+
+> Qual a correlação entre posição de largada e posição final?
+[chama correlacao("Starting Grid", "Position", "pearson")]
+Correlação de Pearson: 0,535 — positiva moderada.
 ```
+
+### Comandos especiais da CLI
+
+| Comando | Função |
+|---|---|
+| `/ajuda` | Lista todos os comandos disponíveis |
+| `/trajetoria` | Exibe tool_calls e resultados da última pergunta |
+| `/custo` | Mostra tokens consumidos, latência e custo estimado em USD |
+| `/sair` | Encerra a sessão |
 
 ### Rodar o benchmark completo
 
@@ -121,28 +153,49 @@ python -m evaluation.benchmark
 
 Gera um relatório em `logs/benchmark_<timestamp>.json` com todas as métricas.
 
----
+### Rodar os testes unitários
 
-## O que vocês precisam completar
-
-Procure por `TODO` no código. Os pontos principais são:
-
-1. **`tools/`** — terminar a implementação das 8 tools obrigatórias.
-2. **`agent/agent.py`** — completar o loop de raciocínio do agente.
-3. **`evaluation/benchmark.json`** — criar pelo menos 25 perguntas adicionais.
-4. **`evaluation/metrics.py`** — implementar comparação de respostas com gabarito.
-5. **(Bônus)** — adicionar pelo menos 1 tool extra além das obrigatórias.
+```bash
+pytest tests/test_tools.py -v
+```
 
 ---
 
-## Cronograma sugerido
+## Ferramentas Implementadas
 
-Veja o enunciado do trabalho para o cronograma de 8 semanas.
+São **11 ferramentas** distribuídas em 4 módulos. Todas recebem parâmetros simples (`str`, `int`) e retornam um dicionário serializável para JSON.
+
+| Módulo | Ferramenta | Descrição |
+|---|---|---|
+| inspect | `listar_colunas()` | Lista nomes e tipos das 14 colunas do dataset |
+| inspect | `descrever_dados()` | Estatísticas descritivas completas (média, desvio, quartis) |
+| inspect | `contar_valores(coluna, top_n)` | Distribuição de frequência dos top-N valores de uma coluna |
+| filter | `filtrar(condicao)` | Filtra com pandas query e retorna estatísticas do subconjunto |
+| filter | `filtrar_e_contar(condicao, coluna)` | Filtra e conta ocorrências por coluna — ranking de vencedores |
+| filter | `agrupar_e_agregar(grupo, col, func)` | GroupBy + agregação: sum, mean, min, max, count, median |
+| filter | `analisar_tempo(coluna, op, cond)` | Converte Race Time / Fastest Lap Time para segundos e agrega |
+| filter | `tempo_total_piloto(piloto, circ, ano)` | Retorna o tempo total de corrida de um piloto (absoluto ou calculado) |
+| stats | `correlacao(col_a, col_b, metodo)` | Correlação de Pearson ou Spearman com interpretação textual |
+| stats | `detectar_outliers(coluna, metodo)` | Outliers por IQR ou z-score: limites, contagem e exemplos |
+| plot | `gerar_grafico(tipo, colunas, titulo)` | Histograma, boxplot, scatter ou barplot salvo em `outputs/` |
 
 ---
 
-## Política de uso de LLMs
+## Resultados do Benchmark
 
-Vocês PODEM usar ChatGPT/Claude/Copilot para programar.
-Vocês NÃO PODEM entregar código que não compreendam.
-Durante a apresentação, qualquer integrante pode ser questionado sobre qualquer linha.
+30 perguntas com gabaritos calculados diretamente via pandas.
+
+| Categoria | Total | Aprovadas | Taxa | Tools (méd.) | Latência (méd.) |
+|---|---|---|---|---|---|
+| Factual | 10 | 10 | 100% | 2,1 | 6,1 s |
+| Analítica | 15 | 13 | 87% | 2,1 | 6,2 s |
+| Ambígua | 5 | 5 | 100% | 7,2 | 16,1 s |
+| **TOTAL** | **30** | **28** | **93%** | **2,8** | **7,8 s** |
+
+Custo total estimado de US$ 0,09 por execução completa do benchmark.
+
+---
+
+## Provedor de LLM
+
+O agente utiliza o modelo **`deepseek-chat`** via [API DeepSeek](https://api-docs.deepseek.com), que é compatível com o formato da API OpenAI. A biblioteca `openai` é usada como cliente.
