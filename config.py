@@ -2,7 +2,6 @@
 Configurações centralizadas do projeto.
 
 Tudo que pode variar entre execuções (caminhos, modelo, limites) fica aqui.
-Assim os alunos não precisam caçar valores espalhados pelo código.
 """
 
 import os
@@ -28,8 +27,8 @@ for d in [DATA_DIR, OUTPUTS_DIR, LOGS_DIR]:
 # ============================================================
 # DATASET
 # ============================================================
-# TODO: alterar para o arquivo CSV do seu grupo.
-DATASET_PATH = DATA_DIR / "exemplo.csv"
+
+DATASET_PATH = DATA_DIR / "f1.csv"
 
 # ============================================================
 # LLM

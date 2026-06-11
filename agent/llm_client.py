@@ -12,6 +12,7 @@ Para usar outros provedores, criem variantes (LLMClientOpenAI etc).
 from __future__ import annotations
 from dataclasses import dataclass
 import time
+import os
 
 from anthropic import Anthropic
 
@@ -50,7 +51,15 @@ class LLMClient:
             raise RuntimeError(
                 "ANTHROPIC_API_KEY não definida. Configure no arquivo .env."
             )
-        self.client = Anthropic(api_key=api_key)
+        base_url = os.getenv("ANTHROPIC_BASE_URL")
+
+        if base_url:
+            self.client = Anthropic(
+                api_key=api_key,
+                base_url=base_url,
+            )
+        else:
+            self.client = Anthropic(api_key=api_key)
         self.model = model
 
     def chat(

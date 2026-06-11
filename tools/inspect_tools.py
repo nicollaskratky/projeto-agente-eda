@@ -1,24 +1,9 @@
-"""
-Ferramentas de inspeção do dataset.
+import pandas as pd
+from tools.base import tool, state
 
-Estas tools respondem a perguntas do tipo "o que tem nesse CSV?"
-e geralmente são as PRIMEIRAS a serem chamadas pelo agente quando
-ele recebe uma pergunta nova.
-"""
-
-from .base import tool, state
-
-
-# ============================================================
-# listar_colunas
-# ============================================================
 
 @tool(
-    description=(
-        "Retorna a lista de colunas do dataset com seus tipos. "
-        "Use esta tool SEMPRE que precisar saber quais colunas existem "
-        "antes de operar sobre elas."
-    ),
+    description="Retorna os nomes e tipos de cada coluna do dataset.",
     parameters={
         "type": "object",
         "properties": {},
@@ -26,97 +11,65 @@ from .base import tool, state
     },
 )
 def listar_colunas() -> dict:
-    """
-    Lista colunas e tipos do dataset carregado.
-
-    Returns:
-        dict com a chave 'colunas', cujo valor é uma lista de
-        dicionários {nome, tipo}.
-    """
     df = state.require_loaded()
     return {
         "colunas": [
             {"nome": col, "tipo": str(df[col].dtype)}
             for col in df.columns
         ],
-        "total_linhas": len(df),
-        "total_colunas": len(df.columns),
+        "total": len(df.columns),
     }
 
 
-# ============================================================
-# descrever_dados
-# ============================================================
-
 @tool(
     description=(
-        "Retorna estatísticas descritivas do dataset (equivalente a df.describe()), "
-        "incluindo tanto colunas numéricas quanto categóricas."
+        "Retorna estatísticas descritivas do dataset. "
+        "Para colunas numéricas: média, desvio padrão, min, max, quartis. "
+        "Para colunas categóricas: contagem, valores únicos, valor mais frequente."
     ),
     parameters={
         "type": "object",
-        "properties": {
-            "colunas": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": (
-                    "Lista de colunas a descrever. Se vazia ou omitida, "
-                    "descreve todas as colunas."
-                ),
-            },
-        },
+        "properties": {},
         "required": [],
     },
 )
-def descrever_dados(colunas: list[str] | None = None) -> dict:
-    """
-    Retorna estatísticas descritivas.
-
-    Args:
-        colunas: subconjunto de colunas. Se None, usa todas.
-
-    Returns:
-        dict com 'numericas' e 'categoricas' como chaves.
-    """
+def descrever_dados() -> dict:
     df = state.require_loaded()
 
-    if colunas:
-        # Valida que todas as colunas existem
-        invalidas = [c for c in colunas if c not in df.columns]
-        if invalidas:
-            return {"erro": f"Colunas inexistentes: {invalidas}"}
-        df = df[colunas]
-
-    # Separa numéricas de categóricas
-    num_df = df.select_dtypes(include="number")
-    cat_df = df.select_dtypes(exclude="number")
-
-    resultado = {}
-    if not num_df.empty:
-        resultado["numericas"] = num_df.describe().round(3).to_dict()
-    if not cat_df.empty:
-        resultado["categoricas"] = {
-            col: {
-                "valores_unicos": int(cat_df[col].nunique()),
-                "mais_frequente": str(cat_df[col].mode().iloc[0])
-                                  if not cat_df[col].mode().empty else None,
-                "frequencia_top": int(cat_df[col].value_counts().iloc[0])
-                                  if len(cat_df[col]) > 0 else 0,
-            }
-            for col in cat_df.columns
+    numericas = {}
+    for col in df.select_dtypes(include="number").columns:
+        s = df[col]
+        numericas[col] = {
+            "media": round(float(s.mean()), 3),
+            "desvio_padrao": round(float(s.std()), 3),
+            "min": round(float(s.min()), 3),
+            "max": round(float(s.max()), 3),
+            "q25": round(float(s.quantile(0.25)), 3),
+            "q50": round(float(s.quantile(0.50)), 3),
+            "q75": round(float(s.quantile(0.75)), 3),
+            "nulos": int(s.isna().sum()),
         }
-    return resultado
 
+    categoricas = {}
+    for col in df.select_dtypes(include="object").columns:
+        s = df[col]
+        categoricas[col] = {
+            "total": int(s.count()),
+            "unicos": int(s.nunique()),
+            "mais_frequente": str(s.mode()[0]) if not s.mode().empty else None,
+            "nulos": int(s.isna().sum()),
+        }
 
-# ============================================================
-# contar_valores
-# ============================================================
+    return {
+        "linhas": len(df),
+        "colunas": len(df.columns),
+        "numericas": numericas,
+        "categoricas": categoricas,
+    }
+
 
 @tool(
-    description=(
-        "Retorna a distribuição de valores de uma coluna específica "
-        "(equivalente a value_counts). Útil para entender categorias."
-    ),
+    description="Retorna a distribuição de valores de uma coluna específica.",
     parameters={
         "type": "object",
         "properties": {
@@ -126,23 +79,22 @@ def descrever_dados(colunas: list[str] | None = None) -> dict:
             },
             "top_n": {
                 "type": "integer",
-                "description": "Quantos valores mais frequentes retornar (default: 10).",
+                "description": "Quantos valores mais frequentes retornar. Padrão: 10.",
             },
         },
         "required": ["coluna"],
     },
 )
 def contar_valores(coluna: str, top_n: int = 10) -> dict:
-    """Distribuição de valores de uma coluna."""
     df = state.require_loaded()
 
     if coluna not in df.columns:
-        return {"erro": f"Coluna '{coluna}' não existe no dataset."}
+        return {"erro": f"Coluna '{coluna}' não existe. Use listar_colunas() para ver as disponíveis."}
 
     contagem = df[coluna].value_counts().head(top_n)
     return {
         "coluna": coluna,
-        "total_valores_unicos": int(df[coluna].nunique()),
+        "top_n": top_n,
+        "total_unicos": int(df[coluna].nunique()),
         "distribuicao": {str(k): int(v) for k, v in contagem.items()},
-        "valores_nulos": int(df[coluna].isna().sum()),
     }
