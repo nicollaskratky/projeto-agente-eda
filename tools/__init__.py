@@ -16,7 +16,7 @@ from .base import (
 
 # Imports que disparam o registro das tools nos módulos:
 from . import inspect_tools   # listar_colunas, descrever_dados, contar_valores
-from . import filter_tools    # filtrar, agrupar_e_agregar, tempo_total_piloto, analisar_tempo
+from . import filter_tools    # filtrar, agrupar_e_agregar, analisar_tempo, tempo_total_piloto
 from . import stats_tools     # correlacao, detectar_outliers
 from . import plot_tools      # gerar_grafico
 
